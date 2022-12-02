@@ -4,15 +4,20 @@ fn main() {
     let input = fs::read_to_string("input.txt")
         .unwrap();
 
-    let x = input.split("\n\n")
+    let mut x = input.split("\n\n")
         .map(|v| {
             v.split("\n")
                 .filter_map(|v| v.parse::<u32>().ok())
-                .reduce(|acc, cur| acc + cur)
-                .unwrap()
+                .sum::<u32>()
         })
-        .max()
-        .unwrap();
+        .collect::<Vec<u32>>();
 
-    println!("Items: {:?}", x);
+    x.sort();
+
+    let sum_biggest_tree = &x[x.len()-3..]
+        .to_vec()
+        .iter()
+        .sum::<u32>();
+
+    println!("Items: {:?};\nfirst_tree: {:?}", x, sum_biggest_tree);
 }
