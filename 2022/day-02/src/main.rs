@@ -15,6 +15,14 @@ impl Hand {
             Hand::Scissors => Hand::Paper,
         }
     }
+
+    fn beaten(&self) -> Hand {
+        match *self {
+            Hand::Scissors => Hand::Rock,
+            Hand::Rock => Hand::Paper,
+            Hand::Paper => Hand::Scissors,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -73,6 +81,47 @@ impl Game {
     }
 }
 
+struct Game2 {
+    opponent: Hand,
+    expected_outcome: Outcome,
+}
+
+impl Game2 {
+    fn from_string(line: &str) -> Result<Game2, &'static str> {
+        let round = line
+            .split_whitespace()
+            .collect::<Vec<&str>>();
+
+        let opponent = round[0];
+        let expected_outcome = round[1];
+
+        let opponent = match opponent {
+            "A" => Hand::Rock,
+            "B" => Hand::Paper,
+            "C" => Hand::Scissors,
+            _ => { return Err("Invalid opponent input") }
+        };
+
+        let expected_outcome = match expected_outcome {
+            "X" => Outcome::Failure,
+            "Y" => Outcome::Draw,
+            "Z" => Outcome::Victory,
+            _ => { return Err("Invalid expected_outcome") }
+        };
+
+        Ok(Game2 { opponent, expected_outcome })
+    }
+
+    fn get_points(&self) -> u32 {
+        let my_hand = match self.expected_outcome {
+            Outcome::Draw => self.opponent,
+            Outcome::Failure => self.opponent.beats(),
+            Outcome::Victory => self.opponent.beaten(),
+        };
+        my_hand as u32 + self.expected_outcome as u32
+    }
+}
+
 fn main() {
     let filename = "input.txt";
     // let filename = "example_input.txt";
@@ -84,10 +133,16 @@ fn main() {
         .map(|game| {
             let outcome = game.play();
             let result = outcome as u32 + game.you as u32;
-            println!("G: {:?} O: {:?}; Result: {}", game, outcome, result);
             result
         })
         .sum::<u32>();
 
     println!("Points sum: {:?}", game_points);
+
+    let game_points = input.split_terminator("\n")
+        .filter_map(|line| Game2::from_string(line).ok())
+        .map(|game| game.get_points())
+        .sum::<u32>();
+
+    println!("Game2 points: {}", game_points);
 }
