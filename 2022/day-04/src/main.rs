@@ -1,4 +1,5 @@
 use std::fs;
+use std::ops;
 
 #[derive(Debug)]
 struct Section {
@@ -20,6 +21,16 @@ impl Section {
         self.start <= other.start && self.end >= other.end ||
         other.start <= self.start && other.end >= self.end
     }
+
+    fn as_range(&self) -> ops::RangeInclusive<u32> {
+        self.start..=self.end
+    }
+
+    fn overlap(&self, other: &Section) -> bool {
+        let mut self_range = self.as_range();
+        let other_range = other.as_range();
+        self_range.any(|v| other_range.contains(&v))
+    }
 }
 
 fn main() {
@@ -34,9 +45,18 @@ fn main() {
                 .split(",")
                 .map(|section| Section::from_string(section));
             (sections.next().unwrap(), sections.next().unwrap())
-        })
+        });
+
+    let intersect = sections
+        .clone()
         .map(|(s1, s2)| s1.intersect(&s2))
         .map(|x| x as u32)
         .sum::<u32>();
-    println!("Sections: {}", sections);
+    println!("Sections that intersect: {}", intersect);
+
+    let overlap = sections
+        .map(|(s1, s2)| s1.overlap(&s2))
+        .map(|x| x as u32)
+        .sum::<u32>();
+    println!("Sections that overlap: {}", overlap);
 }
