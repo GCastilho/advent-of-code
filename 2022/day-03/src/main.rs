@@ -15,6 +15,7 @@ fn init_priority() -> HashMap<char, usize> {
             priority.insert(v, i + 27);
         });
 
+    assert_eq!(priority.len(), 26 * 2);
     priority
 }
 
@@ -39,4 +40,21 @@ fn main() {
         .sum::<usize>();
 
     println!("Priority sum: {}", priority_sum);
+
+    let badge_priority_sum = input
+        .split_terminator("\n")
+        .collect::<Vec<&str>>()
+        .chunks(3)
+        .filter_map(|group| {
+            let first = group[0];
+            let treplicated = first.chars().find(|item| {
+                let second = group[1];
+                let third = group[2];
+                second.contains(*item) && third.contains(*item)
+            }).expect("Expected a char to be on all 3 lines");
+            prority_map.get(&treplicated)
+        })
+        .sum::<usize>();
+
+    println!("Badge priority sum: {}", badge_priority_sum);
 }
