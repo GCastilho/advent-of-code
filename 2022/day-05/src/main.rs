@@ -101,5 +101,30 @@ fn main() {
         .map(|key| table.get(&key).unwrap().last().unwrap())
         .collect::<String>();
 
-    println!("output: {:?}", output);
+    println!("output 1: {:?}", output);
+
+    let mut table = get_table(column_line, &input);
+
+    input
+        .lines()
+        .skip(column_line + 1)
+        .filter(|line| !line.is_empty())
+        .map(|line| Procedure::parse(line))
+        .for_each(|procedure| {
+            let stack = table.get(&procedure.from).unwrap();
+            let (stack, items) = stack
+                .split_at(stack.len() - procedure.qty);
+            let mut items = items.to_vec();
+            table.insert(procedure.from, stack.to_vec());
+            let stack = table.get_mut(&procedure.to).unwrap();
+            let mut stack = stack.clone();
+            stack.append(&mut items);
+            table.insert(procedure.to, stack);
+        });
+
+    let output = (1..=table.len())
+        .map(|key| table.get(&key).unwrap().last().unwrap())
+        .collect::<String>();
+
+    println!("output 2: {:?}", output);
 }
