@@ -21,5 +21,22 @@ fn main() {
         if uniq.len() == 4 { break; }
     }
 
-    println!("counter: {}", total_amount);
+    println!("start-of-packet: {}", total_amount);
+
+    let max_queue_size = 14;
+    let mut queue = CircularQueue::with_capacity(max_queue_size);
+    let mut total_amount = 0;
+
+    for char in input.chars().take_while(|char| *char != '\n') {
+        queue.push(char);
+        total_amount += 1;
+
+        let mut uniq = HashSet::new();
+        for c in queue.iter() {
+            uniq.insert(*c);
+        }
+        if uniq.len() == max_queue_size { break; }
+    }
+
+    println!("start-of-message: {}", total_amount);
 }
