@@ -109,7 +109,7 @@ console.dir(cursor.root, { depth: null })
 const root_dir = cursor.root
 assert.ok(root_dir)
 
-const nodes: Array<Directory> = [root_dir]
+let nodes: Array<Directory> = [root_dir]
 const nodes_found: Array<Directory> = []
 
 for (const node of nodes) {
@@ -121,4 +121,28 @@ for (const node of nodes) {
 
 const computed_size = nodes_found.reduce((acc, cur) => acc + cur.size, 0)
 
-console.log('nodes_found', nodes_found, '\ncomputed_size', computed_size)
+console.log('computed_size', computed_size)
+
+const total_space = 70000000
+const required_space = 30000000
+const minimum_dir_size = Math.abs(total_space - root_dir.size - required_space)
+assert(required_space > minimum_dir_size)
+
+console.log('minimum_dir_size', minimum_dir_size, 'total_size', root_dir.size)
+
+const valid_size_nodes: Array<Directory> = []
+
+nodes = [root_dir]
+
+for (const node of nodes) {
+	if (node.size >= minimum_dir_size) {
+		valid_size_nodes.push(node)
+	}
+	nodes.push(...node.directories)
+}
+
+const minimum_valid_size = valid_size_nodes
+	.map(v => v.size)
+	.sort((a, b) => a - b)[0]
+
+console.log('minimum_valid_size', minimum_valid_size)
