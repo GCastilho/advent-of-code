@@ -1,8 +1,8 @@
 use std::fs;
 use matrix::{prelude::Compressed, Matrix};
 
-// const FILENAME: &str = "example.txt";
-const FILENAME: &str = "input.txt";
+const FILENAME: &str = "example.txt";
+// const FILENAME: &str = "input.txt";
 
 fn is_tallest(matrix: &Compressed<u8>, coordinates: (usize, usize)) -> bool {
     let (row, column) = coordinates;
@@ -34,6 +34,63 @@ fn is_tallest(matrix: &Compressed<u8>, coordinates: (usize, usize)) -> bool {
     from_left || from_right || from_top || from_bottom
 }
 
+fn build_scenic_score_matrix(matrix: &Compressed<u8>) -> Compressed<usize> {
+    let mut scenic_score_matrix = Compressed::zero((matrix.rows, matrix.columns));
+
+    for (row, column, value) in matrix.iter() {
+        println!("iter {}, {}, {}", row, column, value);
+        #[derive(Debug)]
+        enum Axis {
+            Column,
+            Row,
+        }
+        #[derive(Debug)]
+        enum Direction {
+            Forward,
+            Backwards,
+        }
+        // o range dos q vai pro zero tá contanto o len errado, pq tá indo de fora pra dentro
+        let ranges = [
+            (0..column, Axis::Column, Direction::Backwards),
+            (column+1..matrix.columns, Axis::Column, Direction::Forward),
+            (0..row, Axis::Row, Direction::Backwards),
+            (row+1..matrix.rows, Axis::Row, Direction::Forward),
+        ];
+        println!("ranges: {:?}", ranges);
+        let scores = ranges.map(|(range, axis, direction)| {
+            let len = range.len();
+            range.enumerate().find(|(_, n)| {
+                let position = match axis {
+                    Axis::Column => (row, *n),
+                    Axis::Row => (*n, column),
+                };
+                let stored = matrix.get(position);
+                println!(
+                    "n: {}; axis: {:?}; value: {}; stored: {}; result: {}",
+                    n, axis, *value, stored, stored >= *value
+                );
+                stored >= *value
+            })
+            .map(|(idx, _)| {
+                match direction {
+                    Direction::Forward => idx + 1,
+                    Direction::Backwards => len - idx,
+                }
+            })
+            .unwrap_or(if len > 0 { len } else { 0 })
+        });
+        let score = scores
+            .into_iter()
+            .reduce(|acc, cur| acc * cur)
+            .unwrap();
+        println!("scores: {:?}\nscore: {}", scores, score);
+        println!();
+        scenic_score_matrix.set((row, column), score)
+    }
+
+    scenic_score_matrix
+}
+
 fn main() {
     let input = fs::read_to_string(FILENAME).unwrap();
 
@@ -63,4 +120,15 @@ fn main() {
     }
 
     println!("visible: {}", visible);
+
+    let scenic_score_matrix = build_scenic_score_matrix(&matrix);
+
+    println!("{:?}", scenic_score_matrix);
+
+    let highest_scenic_score = scenic_score_matrix
+        .iter()
+        .map(|v|  v.2)
+        .max()
+        .unwrap();
+    println!("highest scenic score: {}", highest_scenic_score);
 }
