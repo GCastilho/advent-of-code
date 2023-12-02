@@ -15,7 +15,7 @@ fn main() {
         .collect::<Vec<_>>();
     let possible_games_id_sum = games
         .iter()
-        .filter(|game| game.check(&GAME_SET_TO_CHECK) == GameResult::Possible)
+        .filter(|game| game.possible(&GAME_SET_TO_CHECK))
         .fold(0, |acc, game| acc + game.id);
     println!("Possible games part one: {possible_games_id_sum}");
 
@@ -39,32 +39,18 @@ impl GameSet {
 impl FromStr for GameSet {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        #[derive(Debug)]
-        enum Cubes {
-            Red,
-            Green,
-            Blue,
-        }
-
         let mut game_set = GameSet::default();
 
-        s.split(',')
-            .map(|s| {
-                let mut words = s.split_whitespace();
-                let num = words.next().unwrap().parse::<u8>().unwrap();
-                let cube = match words.next().unwrap() {
-                    "red" => Cubes::Red,
-                    "green" => Cubes::Green,
-                    "blue" => Cubes::Blue,
-                    _ => panic!("Missing cube type"),
-                };
-                (num, cube)
-            })
-            .for_each(|(num, cube)| match cube {
-                Cubes::Red => game_set.red = num,
-                Cubes::Green => game_set.green = num,
-                Cubes::Blue => game_set.blue = num,
-            });
+        s.split(',').for_each(|s| {
+            let mut words = s.split_whitespace();
+            let num = words.next().unwrap().parse::<u8>().unwrap();
+            match words.next().unwrap() {
+                "red" => game_set.red = num,
+                "green" => game_set.green = num,
+                "blue" => game_set.blue = num,
+                _ => panic!("Missing cube type"),
+            };
+        });
 
         Ok(game_set)
     }
@@ -77,16 +63,10 @@ struct Game {
 }
 
 impl Game {
-    fn check(&self, to: &GameSet) -> GameResult {
-        if self
-            .sets
-            .iter()
-            .any(|set| set.red > to.red || set.blue > to.blue || set.green > to.green)
-        {
-            GameResult::Impossible
-        } else {
-            GameResult::Possible
-        }
+    fn possible(&self, against: &GameSet) -> bool {
+        self.sets.iter().all(|set| {
+            against.red >= set.red && against.blue >= set.blue && against.green >= set.green
+        })
     }
 
     fn minimum(&self) -> GameSet {
@@ -123,16 +103,10 @@ impl FromStr for Game {
     }
 }
 
-#[derive(Debug, PartialEq)]
-enum GameResult {
-    Possible,
-    Impossible,
-}
-
 #[cfg(test)]
 mod test {
     mod part_one {
-        use crate::{Game, GameResult, GameSet};
+        use crate::{Game, GameSet};
 
         const GAME_SET_TO_CHECK: GameSet = GameSet {
             red: 12,
@@ -172,7 +146,7 @@ mod test {
             let game = "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green"
                 .parse::<Game>()
                 .unwrap();
-            assert_eq!(game.check(&GAME_SET_TO_CHECK), GameResult::Possible)
+            assert!(game.possible(&GAME_SET_TO_CHECK))
         }
 
         #[test]
@@ -180,7 +154,7 @@ mod test {
             let game = "Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue"
                 .parse::<Game>()
                 .unwrap();
-            assert_eq!(game.check(&GAME_SET_TO_CHECK), GameResult::Possible)
+            assert!(game.possible(&GAME_SET_TO_CHECK))
         }
 
         #[test]
@@ -188,7 +162,7 @@ mod test {
             let game = "Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red"
                 .parse::<Game>()
                 .unwrap();
-            assert_eq!(game.check(&GAME_SET_TO_CHECK), GameResult::Impossible)
+            assert!(!game.possible(&GAME_SET_TO_CHECK))
         }
 
         #[test]
@@ -196,7 +170,7 @@ mod test {
             let game = "Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red"
                 .parse::<Game>()
                 .unwrap();
-            assert_eq!(game.check(&GAME_SET_TO_CHECK), GameResult::Impossible)
+            assert!(!game.possible(&GAME_SET_TO_CHECK))
         }
 
         #[test]
@@ -204,7 +178,7 @@ mod test {
             let game = "Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green"
                 .parse::<Game>()
                 .unwrap();
-            assert_eq!(game.check(&GAME_SET_TO_CHECK), GameResult::Possible)
+            assert!(game.possible(&GAME_SET_TO_CHECK))
         }
 
         #[test]
@@ -223,7 +197,7 @@ mod test {
                 .collect::<Vec<_>>();
             let possible_games_id_sum = games
                 .iter()
-                .filter(|game| game.check(&GAME_SET_TO_CHECK) == GameResult::Possible)
+                .filter(|game| game.possible(&GAME_SET_TO_CHECK))
                 .fold(0, |acc, game| acc + game.id);
             assert_eq!(possible_games_id_sum, 8)
         }
