@@ -18,13 +18,22 @@ fn main() {
         .filter(|game| game.check(&GAME_SET_TO_CHECK) == GameResult::Possible)
         .fold(0, |acc, game| acc + game.id);
     println!("Possible games part one: {possible_games_id_sum}");
+
+    let power_sum = games.iter().map(|game| game.minimum().power()).sum::<u64>();
+    println!("Sum of powers is: {power_sum}");
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 struct GameSet {
     red: u8,
     green: u8,
     blue: u8,
+}
+
+impl GameSet {
+    fn power(&self) -> u64 {
+        self.red as u64 * self.green as u64 * self.blue as u64
+    }
 }
 
 impl FromStr for GameSet {
@@ -37,11 +46,7 @@ impl FromStr for GameSet {
             Blue,
         }
 
-        let mut game_set = GameSet {
-            red: 0,
-            green: 0,
-            blue: 0,
-        };
+        let mut game_set = GameSet::default();
 
         s.split(',')
             .map(|s| {
@@ -82,6 +87,16 @@ impl Game {
         } else {
             GameResult::Possible
         }
+    }
+
+    fn minimum(&self) -> GameSet {
+        let mut game_set = GameSet::default();
+        self.sets.iter().for_each(|game| {
+            game_set.red = game_set.red.max(game.red);
+            game_set.green = game_set.green.max(game.green);
+            game_set.blue = game_set.blue.max(game.blue);
+        });
+        game_set
     }
 }
 
@@ -211,6 +226,93 @@ mod test {
                 .filter(|game| game.check(&GAME_SET_TO_CHECK) == GameResult::Possible)
                 .fold(0, |acc, game| acc + game.id);
             assert_eq!(possible_games_id_sum, 8)
+        }
+    }
+
+    mod part_two {
+        use crate::{Game, GameSet};
+
+        #[test]
+        fn t1() {
+            let game = "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green"
+                .parse::<Game>()
+                .unwrap();
+            assert_eq!(
+                game.minimum(),
+                GameSet {
+                    red: 4,
+                    green: 2,
+                    blue: 6
+                }
+            )
+        }
+
+        #[test]
+        fn t2() {
+            let game = "Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue"
+                .parse::<Game>()
+                .unwrap();
+            assert_eq!(
+                game.minimum(),
+                GameSet {
+                    red: 1,
+                    green: 3,
+                    blue: 4
+                }
+            )
+        }
+
+        #[test]
+        fn t3() {
+            let game = "Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red"
+                .parse::<Game>()
+                .unwrap();
+            assert_eq!(
+                game.minimum(),
+                GameSet {
+                    red: 20,
+                    green: 13,
+                    blue: 6
+                }
+            )
+        }
+
+        #[test]
+        fn t4() {
+            let game = "Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red"
+                .parse::<Game>()
+                .unwrap();
+            assert_eq!(
+                game.minimum(),
+                GameSet {
+                    red: 14,
+                    green: 3,
+                    blue: 15
+                }
+            )
+        }
+
+        #[test]
+        fn t5() {
+            let game = "Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green"
+                .parse::<Game>()
+                .unwrap();
+            assert_eq!(
+                game.minimum(),
+                GameSet {
+                    red: 6,
+                    green: 3,
+                    blue: 2
+                }
+            )
+        }
+
+        #[test]
+        fn power() {
+            let game = "Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red"
+                .parse::<Game>()
+                .unwrap();
+            assert_eq!(game.minimum().power(), 1560)
         }
     }
 }
