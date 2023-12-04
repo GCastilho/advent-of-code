@@ -12,6 +12,16 @@ fn main() {
         .sum::<u32>();
 
     println!("Part one, sum is: {sum}");
+
+    let gear_ratios = engine_schematic
+        .symbols()
+        .into_iter()
+        .filter(|symbol| symbol.is_gear)
+        .map(|symbol| engine_schematic.get_adjacent_numbers(&symbol))
+        .filter(|nums| nums.len() == 2)
+        .map(|nums| nums[0] * nums[1])
+        .sum::<u32>();
+    println!("Part two, gear ratios is: {gear_ratios}");
 }
 
 type Coordinates = (usize, usize);
@@ -36,7 +46,7 @@ impl EngineSchematic {
         for token in line.into_iter() {
             match token {
                 Token::None => (),
-                Token::Symbol => self.0.set((line_num, idx), token),
+                Token::Symbol { .. } => self.0.set((line_num, idx), token),
                 Token::Number { len, .. } => {
                     for _ in 0..len {
                         self.0.set((line_num, idx), token);
@@ -66,8 +76,11 @@ impl EngineSchematic {
         for x in 0..self.0.rows() {
             for y in 0..self.0.columns() {
                 let token = self.0.get((x, y));
-                if token == Token::Symbol {
-                    symbols.push(Symbol((x, y)))
+                if let Token::Symbol(is_gear) = token {
+                    symbols.push(Symbol {
+                        coordinates: (x, y),
+                        is_gear,
+                    })
                 }
             }
         }
@@ -78,7 +91,10 @@ impl EngineSchematic {
         let mut numbers = Vec::new();
         let mut ids = Vec::new();
 
-        let Symbol((x, y)) = symbol;
+        let Symbol {
+            coordinates: (x, y),
+            ..
+        } = symbol;
 
         let x_start = x.checked_sub(1).unwrap_or_default();
         let x_end = if *x == self.0.columns() {
@@ -109,12 +125,15 @@ impl EngineSchematic {
 }
 
 #[derive(Debug, PartialEq)]
-struct Symbol(Coordinates);
+struct Symbol {
+    coordinates: Coordinates,
+    is_gear: bool,
+}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum Token {
     None,
-    Symbol,
+    Symbol(bool),
     Number { id: usize, value: u32, len: usize },
 }
 
@@ -156,8 +175,10 @@ impl Parser {
                 let c = iter.next().unwrap();
                 if c == '.' {
                     tokens.push(Token::None)
+                } else if c == '*' {
+                    tokens.push(Token::Symbol(true))
                 } else {
-                    tokens.push(Token::Symbol)
+                    tokens.push(Token::Symbol(false))
                 }
             }
         }
@@ -168,10 +189,7 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
-    mod part_one {
-        use crate::*;
-
-        const INPUT: &str = r"
+    const INPUT: &str = r"
 467..114..
 ...*......
 ..35..633.
@@ -182,6 +200,10 @@ mod test {
 ......755.
 ...$.*....
 .664.598..";
+
+    mod part_one {
+        use super::INPUT;
+        use crate::*;
 
         #[test]
         fn get_m_size() {
@@ -199,7 +221,7 @@ mod test {
                     value: 617,
                     len: 3,
                 },
-                Token::Symbol,
+                Token::Symbol(true),
                 Token::None,
                 Token::None,
                 Token::Number {
@@ -230,7 +252,7 @@ mod test {
             matrix.set((0, 0), t1);
             matrix.set((0, 1), t1);
             matrix.set((0, 2), t1);
-            matrix.set((0, 3), Token::Symbol);
+            matrix.set((0, 3), Token::Symbol(true));
             let t2 = Token::Number {
                 id: 1,
                 value: 63,
@@ -245,16 +267,28 @@ mod test {
         #[test]
         fn symbols() {
             let mut matrix = EngineSchematic::new((2, 2));
-            matrix.0.set((0, 0), Token::Symbol);
-            matrix.0.set((1, 1), Token::Symbol);
+            matrix.0.set((0, 0), Token::Symbol(false));
+            matrix.0.set((1, 1), Token::Symbol(false));
             let symbols = matrix.symbols();
-            assert_eq!(symbols, vec![Symbol((0, 0)), Symbol((1, 1))]);
+            assert_eq!(
+                symbols,
+                vec![
+                    Symbol {
+                        coordinates: (0, 0),
+                        is_gear: false
+                    },
+                    Symbol {
+                        coordinates: (1, 1),
+                        is_gear: false
+                    }
+                ]
+            );
         }
 
         #[test]
         fn get_adjacent_numbers() {
             let mut matrix = EngineSchematic::new((3, 3));
-            matrix.0.set((1, 1), Token::Symbol);
+            matrix.0.set((1, 1), Token::Symbol(false));
             matrix.0.set(
                 (0, 0),
                 Token::Number {
@@ -279,7 +313,10 @@ mod test {
                     len: 1,
                 },
             );
-            let mut adjacents = matrix.get_adjacent_numbers(&Symbol((1, 1)));
+            let mut adjacents = matrix.get_adjacent_numbers(&Symbol {
+                coordinates: (1, 1),
+                is_gear: false,
+            });
             adjacents.sort();
             assert_eq!(adjacents, vec![3, 12])
         }
@@ -293,6 +330,25 @@ mod test {
                 .flat_map(|s| matrix.get_adjacent_numbers(&s))
                 .sum::<u32>();
             assert_eq!(sum, 4361);
+        }
+    }
+
+    mod part_two {
+        use super::INPUT;
+        use crate::EngineSchematic;
+
+        #[test]
+        fn get_gear() {
+            let matrix = EngineSchematic::from(INPUT);
+            let gears = matrix
+                .symbols()
+                .into_iter()
+                .filter(|symbol| symbol.is_gear)
+                .map(|symbol| matrix.get_adjacent_numbers(&symbol))
+                .filter(|nums| nums.len() == 2)
+                .map(|nums| nums[0] * nums[1])
+                .sum::<u32>();
+            assert_eq!(gears, 467835);
         }
     }
 }
