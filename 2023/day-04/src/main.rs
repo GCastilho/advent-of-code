@@ -2,13 +2,21 @@ use std::{fs, str::FromStr};
 
 fn main() {
     let input = fs::read_to_string("./input.txt").unwrap();
-    let mw_nums = input
+    let mut cards = input
         .lines()
         .map(|line| line.parse::<Card>().unwrap())
+        .collect::<Vec<_>>();
+
+    let mw_nums = cards
+        .iter()
         .map(|card| card.get_winning_nums())
         .collect::<Vec<_>>();
     let points = get_points(&mw_nums);
     println!("Part one, points: {points}");
+
+    process_cards(&mut cards);
+    let card_count = cards.iter().map(|c| c.instances).sum::<u64>();
+    println!("Part two, cards: {card_count}");
 }
 
 #[derive(Debug, PartialEq)]
@@ -16,6 +24,7 @@ struct Card {
     id: u8,
     w_nums: Vec<u8>,
     m_nums: Vec<u8>,
+    instances: u64,
 }
 
 impl Card {
@@ -56,6 +65,7 @@ impl FromStr for Card {
             id,
             w_nums: parse_nums(),
             m_nums: parse_nums(),
+            instances: 1,
         })
     }
 }
@@ -70,6 +80,18 @@ fn get_points(mw_nums: &[Vec<u8>]) -> u64 {
                 .map_or(0, |exp| 2_u64.pow(exp as u32))
         })
         .sum::<u64>()
+}
+
+fn process_cards(cards: &mut [Card]) {
+    for current in 0..cards.len() {
+        let current_card = &cards[current];
+        let w_cards = current_card.get_winning_nums().len();
+        for _ in 0..current_card.instances {
+            for card in cards.iter_mut().skip(current + 1).take(w_cards) {
+                card.instances += 1;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -96,6 +118,7 @@ mod test {
                 id: 13,
                 w_nums: vec![41, 48, 83, 86, 17],
                 m_nums: vec![83, 86, 6, 31, 17, 9, 48, 53],
+                instances: 1,
             };
             assert_eq!(card, expected)
         }
@@ -153,6 +176,70 @@ mod test {
                 .collect::<Vec<_>>();
             let points = get_points(&mw_nums);
             assert_eq!(points, 13);
+        }
+    }
+
+    mod part_two {
+        use super::INPUT;
+        use crate::{process_cards, Card};
+
+        fn get_cards() -> Vec<Card> {
+            INPUT
+                .lines()
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty())
+                .map(|line| line.parse::<Card>().unwrap())
+                .collect()
+        }
+
+        #[derive(Debug, PartialEq)]
+        struct CardTrimmed {
+            id: u8,
+            instances: u64,
+        }
+
+        #[test]
+        fn to_process_cards() {
+            let mut cards = get_cards();
+            process_cards(&mut cards);
+            let cards = cards
+                .into_iter()
+                .map(|card| CardTrimmed {
+                    id: card.id,
+                    instances: card.instances,
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                cards,
+                vec![
+                    CardTrimmed {
+                        id: 1,
+                        instances: 1
+                    },
+                    CardTrimmed {
+                        id: 2,
+                        instances: 2
+                    },
+                    CardTrimmed {
+                        id: 3,
+                        instances: 4
+                    },
+                    CardTrimmed {
+                        id: 4,
+                        instances: 8
+                    },
+                    CardTrimmed {
+                        id: 5,
+                        instances: 14
+                    },
+                    CardTrimmed {
+                        id: 6,
+                        instances: 1
+                    },
+                ]
+            );
+            let card_count = cards.iter().map(|c| c.instances).sum::<u64>();
+            assert_eq!(card_count, 30)
         }
     }
 }
