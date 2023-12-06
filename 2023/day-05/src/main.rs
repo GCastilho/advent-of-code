@@ -1,6 +1,6 @@
-use std::{fs, str::FromStr};
-
 use itertools::Itertools;
+use rayon::prelude::*;
+use std::{fs, str::FromStr};
 
 fn main() {
     let input = fs::read_to_string("./input.txt").unwrap();
@@ -56,6 +56,8 @@ impl Almanac {
         self.seeds
             .iter()
             .tuples::<(_, _)>()
+            .collect_vec()
+            .par_iter()
             .flat_map(|(&first, &len)| (first..first + len))
             .flat_map(|seed| {
                 let mut seed = vec![seed];
