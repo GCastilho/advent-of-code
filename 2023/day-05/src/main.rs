@@ -7,8 +7,11 @@ fn main() {
     let almanac = input.parse::<Almanac>().unwrap();
 
     let locations = almanac.find_locations();
-    let lowest_location = locations.into_iter().map(|n| n as u128).min().unwrap();
+    let lowest_location = locations.into_iter().min().unwrap();
     println!("Part one, lowest location is: {lowest_location}");
+
+    let lowest_location_range = almanac.find_lowest_location_using_range();
+    println!("Part two, lowest location with range is: {lowest_location_range}");
 }
 
 #[derive(Debug, PartialEq)]
@@ -47,6 +50,22 @@ impl Almanac {
         }
 
         locations
+    }
+
+    fn find_lowest_location_using_range(&self) -> u64 {
+        self.seeds
+            .iter()
+            .tuples::<(_, _)>()
+            .flat_map(|(&first, &len)| (first..first + len))
+            .flat_map(|seed| {
+                let mut seed = vec![seed];
+                for i in 0..self.maps.len() {
+                    seed = self.convert_categories(i, &seed);
+                }
+                seed
+            })
+            .min()
+            .unwrap()
     }
 }
 
@@ -128,5 +147,12 @@ mod test {
         let almanac = get_almanac();
         let locations = almanac.find_locations();
         assert_eq!(locations, vec![82, 43, 86, 35]);
+    }
+
+    #[test]
+    fn t3() {
+        let almanac = get_almanac();
+        let lowest = almanac.find_lowest_location_using_range();
+        assert_eq!(lowest, 46);
     }
 }
