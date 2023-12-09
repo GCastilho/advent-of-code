@@ -24,8 +24,9 @@ enum HandType {
     FiveOfKind,
 }
 
-#[derive(Debug, PartialEq, PartialOrd, EnumString, Eq, Hash)]
+#[derive(Debug, PartialEq, PartialOrd, EnumString, Eq, Hash, Clone, Copy)]
 enum Card {
+    J,
     #[strum(serialize = "2")]
     Two = 2,
     #[strum(serialize = "3")]
@@ -43,7 +44,6 @@ enum Card {
     #[strum(serialize = "9")]
     Nine,
     T,
-    J,
     Q,
     K,
     A,
@@ -61,6 +61,25 @@ impl Hand {
         self.cards.iter().for_each(|card| {
             items.entry(card).and_modify(|v| *v += 1).or_insert(1);
         });
+        if let Some(&joker_count) = items.get(&Card::J) {
+            let biggest_card_count = items.iter().fold(None, |acc, (&card, &count)| match card {
+                Card::J => acc,
+                _ => match acc {
+                    None => Some((*card, count)),
+                    Some((_, acc_count)) => {
+                        if !matches!(card, Card::J) && count > acc_count {
+                            Some((*card, count))
+                        } else {
+                            acc
+                        }
+                    }
+                },
+            });
+            if let Some((card, _)) = biggest_card_count {
+                *items.get_mut(&card).unwrap() += joker_count;
+                items.remove(&Card::J);
+            }
+        }
         if items.len() == 1 {
             HandType::FiveOfKind
         } else if items.len() == 2 && items.iter().any(|(_, c)| *c == 4) {
@@ -141,7 +160,7 @@ mod test {
             .collect_vec()
     }
 
-    mod part_one {
+    mod part_two {
         use crate::{get_total_winnings, test::get_cards, Card, Hand, HandType};
 
         #[test]
@@ -225,10 +244,6 @@ mod test {
                         points: 765
                     },
                     Hand {
-                        cards: [Card::K, Card::T, Card::J, Card::J, Card::T],
-                        points: 220
-                    },
-                    Hand {
                         cards: [Card::K, Card::K, Card::Six, Card::Seven, Card::Seven],
                         points: 28
                     },
@@ -240,6 +255,10 @@ mod test {
                         cards: [Card::Q, Card::Q, Card::Q, Card::J, Card::A],
                         points: 483
                     },
+                    Hand {
+                        cards: [Card::K, Card::T, Card::J, Card::J, Card::T],
+                        points: 220
+                    },
                 ]
             )
         }
@@ -248,7 +267,7 @@ mod test {
         fn total_winnings() {
             let mut cards = get_cards();
             cards.sort();
-            assert_eq!(get_total_winnings(&cards), 6440);
+            assert_eq!(get_total_winnings(&cards), 5905);
         }
     }
 }
