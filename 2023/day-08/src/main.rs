@@ -1,3 +1,4 @@
+use lcmx::lcmx;
 use std::{collections::HashMap, fs, str::FromStr};
 use strum_macros::EnumString;
 
@@ -7,6 +8,9 @@ fn main() {
 
     let steps = map.walk_to_zzz();
     println!("Part one, required steps are {}", steps.len());
+
+    let steps = map.walk_to_z_par();
+    println!("Part two, required steps are {steps}");
 }
 
 #[derive(Debug, PartialEq, EnumString)]
@@ -23,6 +27,7 @@ struct Node {
     right: String,
 }
 
+#[cfg(test)]
 impl Node {
     fn new(left: &str, right: &str) -> Self {
         Self {
@@ -66,6 +71,39 @@ impl Map {
         }
 
         steps
+    }
+
+    fn walk(&self, from: &str, instruction: &Instruction) -> &String {
+        let current_node = self.nodes.get(from).unwrap();
+        match instruction {
+            Instruction::Left => &current_node.left,
+            Instruction::Right => &current_node.right,
+        }
+    }
+
+    fn walk_to_z_par(&self) -> u64 {
+        let steps = self
+            .nodes
+            .keys()
+            .filter(|key| key.ends_with('A'))
+            .collect::<Vec<_>>()
+            .iter()
+            .map(|&node| {
+                let mut steps = 0;
+
+                let mut next_node = node;
+                for instruction in self.instructions.iter().cycle() {
+                    steps += 1;
+                    next_node = self.walk(next_node, instruction);
+                    if next_node.ends_with('Z') {
+                        break;
+                    }
+                }
+
+                steps
+            })
+            .collect::<Vec<_>>();
+        lcmx(&steps).unwrap()
     }
 }
 
@@ -114,24 +152,25 @@ mod test {
         assert_eq!(
             map,
             Map {
-                instructions: vec![Instruction::Right, Instruction::Left],
+                instructions: vec![Instruction::Left, Instruction::Right],
                 nodes: HashMap::from([
-                    ("AAA".into(), Node::new("BBB", "CCC")),
-                    ("BBB".into(), Node::new("DDD", "EEE")),
-                    ("CCC".into(), Node::new("ZZZ", "GGG")),
-                    ("DDD".into(), Node::new("DDD", "DDD")),
-                    ("EEE".into(), Node::new("EEE", "EEE")),
-                    ("GGG".into(), Node::new("GGG", "GGG")),
-                    ("ZZZ".into(), Node::new("ZZZ", "ZZZ")),
+                    ("11A".into(), Node::new("11B", "XXX")),
+                    ("11B".into(), Node::new("XXX", "11Z")),
+                    ("11Z".into(), Node::new("11B", "XXX")),
+                    ("22A".into(), Node::new("22B", "XXX")),
+                    ("22B".into(), Node::new("22C", "22C")),
+                    ("22C".into(), Node::new("22Z", "22Z")),
+                    ("22Z".into(), Node::new("22B", "22B")),
+                    ("XXX".into(), Node::new("XXX", "XXX")),
                 ])
             }
         )
     }
 
     #[test]
-    fn walk() {
+    fn walk_par() {
         let map = get_map();
-        let steps = map.walk_to_zzz().len();
-        assert_eq!(steps, 2);
+        let steps = map.walk_to_z_par();
+        assert_eq!(steps, 6);
     }
 }
