@@ -9,13 +9,16 @@ fn main() {
         .collect::<Vec<Sequence>>();
     let extrapolated_values = sequences.iter().map(|s| s.find_next()).sum::<i64>();
     println!("Part one, the sum of the extrapolated are {extrapolated_values}");
+
+    let extrapolated_values = sequences.iter().map(|s| s.find_previous()).sum::<i64>();
+    println!("Part two, the sum of the extrapolated are {extrapolated_values}");
 }
 
 #[derive(Debug, PartialEq)]
 struct Sequence(Vec<i64>);
 
 impl Sequence {
-    fn find_next(&self) -> i64 {
+    fn sequenciate(&self) -> Vec<Vec<i64>> {
         let mut sequences = vec![self.0.clone()];
 
         while !sequences.last().unwrap().iter().all(|v| *v == 0) {
@@ -29,9 +32,20 @@ impl Sequence {
             sequences.push(next_sequence)
         }
 
+        sequences.reverse();
         sequences
+    }
+
+    fn find_next(&self) -> i64 {
+        self.sequenciate()
             .iter()
             .fold(0, |acc, sequence| acc + sequence.last().unwrap())
+    }
+
+    fn find_previous(&self) -> i64 {
+        self.sequenciate()
+            .iter()
+            .fold(0, |acc, sequence| sequence.first().unwrap() - acc)
     }
 }
 
@@ -80,6 +94,16 @@ mod test {
         fn find_next() {
             let next_sum = get_input().iter().map(|s| s.find_next()).sum::<i64>();
             assert_eq!(next_sum, 114);
+        }
+    }
+
+    mod part_two {
+        use crate::test::get_input;
+
+        #[test]
+        fn find_previous() {
+            let previous_sum = get_input().iter().map(|s| s.find_previous()).sum::<i64>();
+            assert_eq!(previous_sum, 2);
         }
     }
 }
