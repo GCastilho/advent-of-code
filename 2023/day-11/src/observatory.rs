@@ -3,6 +3,7 @@ use matrix::format::Compressed;
 use matrix::prelude::Transpose;
 use matrix::Matrix;
 use matrix::{format::Conventional, Element};
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::str::FromStr;
 use strum::EnumString;
 
@@ -73,10 +74,14 @@ impl<State: ObservationState> fmt::Display for Observation<State> {
 }
 
 impl Observation<Raw> {
-    pub fn expand(&self) -> Observation<Expanded> {
+    /// # Panics
+    ///
+    /// Panics if to < 2
+    pub fn expand(&self, to: usize) -> Observation<Expanded> {
+        assert!(to > 1);
         let scan_offsets = |acc: &mut usize, is_void_column| {
             if is_void_column {
-                *acc += 1;
+                *acc += to - 1;
             }
             Some(*acc)
         };
@@ -104,12 +109,10 @@ impl Observation<Raw> {
         let x = self.matrix.columns + columns_offset.last().copied().unwrap_or_default();
         let mut expanded = Compressed::zero((y, x));
 
-        for (y, y_offset) in rows_offset.iter().enumerate().take(self.matrix.rows) {
-            for (x, x_offset) in columns_offset.iter().enumerate().take(self.matrix.columns) {
-                let y1 = y + *y_offset;
-                let x1 = x + *x_offset;
-                expanded.set((y1, x1), self.matrix.get((y, x)));
-            }
+        for (y, x, _) in self.matrix.iter() {
+            let y1 = y + rows_offset[y];
+            let x1 = x + columns_offset[x];
+            expanded.set((y1, x1), Item::Galaxy);
         }
 
         Observation {
@@ -121,10 +124,10 @@ impl Observation<Raw> {
 
 impl Observation<Expanded> {
     pub fn to_galaxies(&self) -> Vec<Coordinates> {
-        (0..self.matrix.rows)
-            .flat_map(|y| (0..self.matrix.columns).map(move |x| (y, x)))
-            .filter(|position| !self.matrix.get(*position).is_zero())
-            .map(Coordinates::new)
+        self.matrix
+            .iter()
+            .par_bridge()
+            .map(|(y, x, _)| Coordinates::new((y, x)))
             .collect::<Vec<_>>()
     }
 }
@@ -150,7 +153,19 @@ mod tests {
         let observation = input
             .parse::<Observation<Raw>>()
             .expect("parse observation")
-            .expand();
+            .expand(2);
+        assert_eq!(expanded, observation.to_string());
+    }
+
+    #[test]
+    fn expand_10() {
+        let input = fs::read_to_string("./examples/simple.txt").expect("read input");
+        let expanded =
+            fs::read_to_string("./examples/simple_expanded_10.txt").expect("read expanded");
+        let observation = input
+            .parse::<Observation<Raw>>()
+            .expect("parse observation")
+            .expand(10);
         assert_eq!(expanded, observation.to_string());
     }
 }

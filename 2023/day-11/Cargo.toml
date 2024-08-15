@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 matrix = "0.22.0"
+rayon = "1.10.0"
 strum = { version = "0.26.3", features = ["derive"] }
