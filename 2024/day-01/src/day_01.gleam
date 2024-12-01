@@ -26,4 +26,11 @@ pub fn main() {
     })
     |> list.reduce(fn(acc, cur) { acc + cur })
   io.println(string.concat(["Part one: ", int.to_string(difference)]))
+
+  let assert Ok(similarity) = list.map(left, fn(item) {
+    let times_in_right_list = list.count(right, fn(v) { v == item })
+    item * times_in_right_list
+  })
+    |> list.reduce(fn(acc, cur) { acc + cur })
+  io.println(string.concat(["Part two: ", int.to_string(similarity)]))
 }
